@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/elitah/blinker_node"
 )
@@ -53,5 +54,29 @@ func main() {
 		fmt.Println(err)
 	}
 	//
-	select {}
+	fmt.Println(node.IsRunning(), node.IsConnected())
+	//
+	go func() {
+		//
+		time.Sleep(5 * time.Second)
+		//
+		node.Close()
+	}()
+	//
+	node.WaitDone()
+	//
+	fmt.Println(node.IsRunning(), node.IsConnected())
+	//
+	time.Sleep(1 * time.Second)
+	//
+	node.Reset()
+	//
+	if err := node.Loop(key); nil != err {
+		//
+		fmt.Println(err)
+	}
+	//
+	node.WaitDone(10000)
+	//
+	node.Close()
 }

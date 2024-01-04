@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"sync"
@@ -95,6 +96,43 @@ func (this *blinkerNode) Close() {
 	}
 }
 
+func (this *blinkerNode) Reset() {
+	//
+	this.Close()
+	//
+	<-this.exit
+	//
+	this.exit = make(chan struct{})
+}
+
+func (this *blinkerNode) WaitDone(args ...int) {
+	//
+	var timeout int
+	//
+	for _, item := range args {
+		//
+		if timeout < item {
+			//
+			timeout = item
+		}
+	}
+	//
+	if 0 == timeout {
+		//
+		<-this.exit
+		//
+		return
+	} else if 3000 > timeout {
+		//
+		timeout = 3000
+	}
+	//
+	select {
+	case <-this.exit:
+	case <-time.After(time.Duration(timeout) * time.Millisecond):
+	}
+}
+
 func (this *blinkerNode) IsRunning() bool {
 	//
 	return 0x0 != atomic.LoadUint32(&this.flag)
@@ -112,6 +150,13 @@ func (this *blinkerNode) Loop(key string) error {
 		if ("" != this.network && "" != this.address) || nil != this.conn {
 			//
 			if atomic.CompareAndSwapUint32(&this.flag, 0x0, 0x1) {
+				//
+				select {
+				case <-this.exit:
+					//
+					return io.EOF
+				default:
+				}
 				//
 				if nil != this.conn {
 					//
