@@ -29,14 +29,16 @@ type blinkerNode struct {
 
 	flag uint32
 
+	exit chan struct{}
+
+	timeout time.Duration
+
 	loglevel int
 	logger   *log.Logger
 
 	network, address string
 
 	conn net.Conn
-
-	timeout time.Duration
 
 	cb_resolve_fail func(string, string)
 	cb_power_set    func(bool)
@@ -46,6 +48,8 @@ type blinkerNode struct {
 func NewBlinkerNode(options ...option) *blinkerNode {
 	//
 	node := &blinkerNode{
+		exit: make(chan struct{}),
+
 		timeout: time.Minute,
 	}
 	//
@@ -72,14 +76,22 @@ func (this *blinkerNode) Close() {
 	//
 	if 0x0 != atomic.LoadUint32(&this.flag) {
 		//
+		select {
+		case <-this.exit:
+		default:
+			//
+			close(this.exit)
+		}
+		//
 		this.Lock()
-		defer this.Unlock()
 		//
 		if nil != this.conn {
 			//
 			this.conn.Close()
 			this.conn = nil
 		}
+		//
+		this.Unlock()
 	}
 }
 
@@ -201,9 +213,11 @@ func (this *blinkerNode) Loop(key string) error {
 								}
 							}
 							//
-							if 0x0 != atomic.LoadUint32(&this.flag) {
+							select {
+							case <-this.exit:
 								//
-								break
+								return
+							default:
 							}
 							//
 							if 3 > failed_cnt {

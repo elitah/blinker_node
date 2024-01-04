@@ -8,6 +8,14 @@ import (
 
 type option func(*blinkerNode)
 
+func WithTimeout(timeout time.Duration) option {
+	//
+	return func(node *blinkerNode) {
+		//
+		node.timeout = timeout
+	}
+}
+
 func WithLogger(fn func() (int, *log.Logger)) option {
 	//
 	return func(node *blinkerNode) {
@@ -16,14 +24,6 @@ func WithLogger(fn func() (int, *log.Logger)) option {
 			//
 			node.loglevel, node.logger = fn()
 		}
-	}
-}
-
-func WithTimeout(timeout time.Duration) option {
-	//
-	return func(node *blinkerNode) {
-		//
-		node.timeout = timeout
 	}
 }
 
